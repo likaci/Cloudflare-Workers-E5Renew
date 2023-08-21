@@ -37,12 +37,13 @@ async function handleRequest(request) {
   const { pathname } = new URL(request.url);
 
   if (typeof CRON_PATH !== "undefined" && pathname.startsWith(CRON_PATH)) {
-    await sendMessage("Scheduled start");
+    await sendMessage("Request start");
+    let msg = ["E5Renew Request"];
     for (let i = 0; i < MS_GRAPH_API_LIST.length; i++) {
-      await fetchMSApi(MS_GRAPH_API_LIST[i]);
+      msg = msg.concat(await fetchMSApi(MS_GRAPH_API_LIST[i]));
       await sleep(randomInt(1000, 5000));
     }
-    await sendMessage("Scheduled finish");
+    await sendMessage(msg.join("\n"));
   }
 
   if (await Token.get("refresh_token") !== null) {
@@ -61,13 +62,14 @@ async function handleRequest(request) {
 }
 
 async function handleScheduled(event) {
-  await sendMessage("Scheduled start");
+  // await sendMessage("Scheduled start");
+  let msg = ["E5Renew Scheduled"];
   const count = randomInt(2, 10);
   for (let i = 0; i < count; i++) {
-    await randomFetchMSApi();
+    msg = msg.concat(await randomFetchMSApi());
     await sleep(randomInt(1000, 5000));
   }
-  await sendMessage("Scheduled finish");
+  await sendMessage(msg.join("\n"));
 }
 
 async function sendMessage(message) {
@@ -201,9 +203,10 @@ async function randomFetchMSApi() {
 }
 
 async function fetchMSApi(url) {
+  let msg = [];
   const accessToken = await getAccessToken();
   if (accessToken === null) {
-    sendMessage("Not login");
+    msg.push("Not login");
     return;
   }
 
@@ -217,11 +220,12 @@ async function fetchMSApi(url) {
     if (response.status === 401) {
       Token.delete("access_token");
     }
-    sendMessage(url + ": " + response.statusText);
+    msg.push(url + ": " + response.statusText);
   }
   catch (e) {
-    sendMessage(url + ": " + e.message);
+    msg.push(url + ": " + e.message);
   }
+  return msg;
 }
 
 function randomInt(min, max) {
