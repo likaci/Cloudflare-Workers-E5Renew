@@ -37,7 +37,7 @@ async function handleRequest(request) {
   const { pathname } = new URL(request.url);
 
   if (typeof CRON_PATH !== "undefined" && pathname.startsWith(CRON_PATH)) {
-    await sendMessage("Request start");
+    // await sendMessage("Request start");
     let msg = ["E5Renew Request"];
     for (let i = 0; i < MS_GRAPH_API_LIST.length; i++) {
       msg = msg.concat(await fetchMSApi(MS_GRAPH_API_LIST[i]));
@@ -73,24 +73,30 @@ async function handleScheduled(event) {
 }
 
 async function sendMessage(message) {
-  if (typeof TGBOT_TOKEN === "undefined" || typeof TGBOT_CHAT_ID === "undefined") {
-    console.log(message);
-    return;
+  if (typeof TGBOT_TOKEN !== "undefined" && typeof TGBOT_CHAT_ID !== "undefined") {
+    const response = await retryFetch(`https://api.telegram.org/bot${TGBOT_TOKEN}/sendMessage`, {
+      method: "post",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        chat_id: TGBOT_CHAT_ID,
+        text: message
+      })
+    });
+    if (response.status !== 200) {
+      console.error(await response.text());
+    }
   }
 
-  const response = await retryFetch(`https://api.telegram.org/bot${TGBOT_TOKEN}/sendMessage`, {
-    method: "post",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      chat_id: TGBOT_CHAT_ID,
-      text: message
-    })
-  });
-  if (response.status !== 200) {
-    console.error(await response.text());
+  if (typeof PUSH_URL !== "undefined") {
+    const response = await retryFetch(`${PUSH_URL}&msg=${message}`);
+    if (response.status !== 200) {
+      console.error(await response.text());
+    }
   }
+
+  console.log(message);
 }
 
 async function handleLogin(request) {
